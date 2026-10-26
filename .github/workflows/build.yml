@@ -1,0 +1,80 @@
+# Compila Copyex Backup Agent desde el código fuente.
+# - En cada push / pull request: compila y guarda el resultado como artefacto.
+# - Al subir una etiqueta vX.Y.Z: además publica una Release con el instalador.
+#
+# Firma con SignPath (cuando acepten el proyecto):
+# el .exe debe firmarse ANTES de meterlo en el instalador, y después se firma el instalador.
+# Habrá que añadir dos pasos con signpath/github-action-submit-signing-request
+# (uno tras "Compilar programa" y otro tras "Crear instalador") usando los datos
+# que da SignPath (organization-id, project-slug, signing-policy-slug y el token
+# guardado en Settings > Secrets como SIGNPATH_API_TOKEN).
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar versión
+        shell: pwsh
+        run: |
+          $asm = Select-String -Path Properties/AssemblyInfo.cs -Pattern 'AssemblyInformationalVersion\("([^"]+)"\)'
+          $nsi = Select-String -Path Instalador.nsi -Pattern '!define VERSION "([^"]+)"'
+          $v1 = $asm.Matches[0].Groups[1].Value
+          $v2 = $nsi.Matches[0].Groups[1].Value
+          if ($v1 -ne $v2) { throw "Versión distinta: AssemblyInfo.cs=$v1, Instalador.nsi=$v2" }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$v1") {
+            throw "La etiqueta $env:GITHUB_REF_NAME no coincide con la versión v$v1"
+          }
+          "VERSION=$v1" >> $env:GITHUB_ENV
+          "Versión $v1"
+
+      - name: Instalar NSIS
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe") -and -not (Test-Path "$env:ProgramFiles\NSIS\makensis.exe")) {
+            choco install nsis -y --no-progress
+          }
+
+      - name: Compilar programa e instalador
+        shell: cmd
+        run: call COMPILAR.bat ci
+
+      - name: Comprobar resultados
+        shell: pwsh
+        run: |
+          foreach ($f in 'bin/CopyexBackupAgent.exe', 'bin/CopyexBackupAgent.exe.config', 'CopyexBackupAgent_Setup.exe') {
+            if (-not (Test-Path $f)) { throw "No se ha generado $f" }
+          }
+          Get-FileHash bin/CopyexBackupAgent.exe, CopyexBackupAgent_Setup.exe -Algorithm SHA256 | Format-Table -AutoSize
+
+      - name: Guardar artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: CopyexBackupAgent-${{ env.VERSION }}
+          path: |
+            CopyexBackupAgent_Setup.exe
+            bin/CopyexBackupAgent.exe
+            bin/CopyexBackupAgent.exe.config
+
+      - name: Publicar Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME CopyexBackupAgent_Setup.exe `
+            --title "Copyex Backup Agent $env:VERSION" `
+            --notes "Instalador de Copyex Backup Agent $env:VERSION. Ver README para la política de firma de código."

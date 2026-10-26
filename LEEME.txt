@@ -1,0 +1,54 @@
+COPYEX BACKUP AGENT
+===================
+Desarrollado por Copyex Ofimática S.L.
+Copyright (C) 2026 Copyex Ofimática S.L.
+Software libre bajo la licencia GNU AGPL v3 (fichero LICENSE). Se distribuye SIN NINGUNA GARANTÍA.
+"Copyex" y su logotipo son marcas de Copyex Ofimática S.L.; la licencia no da derechos sobre ellas.
+
+INSTALAR
+--------
+Ejecuta CopyexBackupAgent_Setup.exe (pide permisos de administrador).
+Si ya tenías el programa anterior, se conserva su configuración.
+Abre el programa una vez y pulsa "Guardar cambios" en Programación para
+actualizar la tarea programada a la nueva versión.
+
+COMPILAR
+--------
+Doble clic en COMPILAR.bat. Genera:
+  bin\CopyexBackupAgent.exe (+ .exe.config)
+  CopyexBackupAgent_Setup.exe (si NSIS está instalado)
+
+CÓMO FUNCIONA
+-------------
+- Cada copia se guarda en una carpeta nueva del destino con su fecha y hora:
+  AAAA-MM-DD_HH-MM-SS  (por ejemplo 2026-10-23_20-00-00).
+- Mientras se copia, la carpeta se llama "._CopyexBackup_EQUIPO_..._INCOMPLETE".
+  Solo cuando termina se renombra, así nunca se confunde una copia a medias con una buena.
+- Al terminar se borran las copias más antiguas de ESTE equipo que superen el número
+  "Copias a conservar". Las carpetas ajenas y las copias de otros equipos no se tocan.
+- Dentro de cada copia hay un fichero _CopyexBackup.txt con el resumen y la lista
+  de archivos que no se pudieron copiar.
+- Si falta espacio en el destino, se borra antes la copia más antigua (la que se
+  borraría igualmente al terminar).
+- El equipo no entra en suspensión mientras copia.
+
+APAGADO
+-------
+Con "Apagar el equipo" activado, al terminar aparece un aviso de 60 segundos con
+"Cancelar apagado" y "Apagar ahora". Si nadie lo toca, el equipo se apaga.
+No se apaga si cancelas la copia. Opcionalmente, solo si no hubo ningún error.
+
+COPIA AUTOMÁTICA
+----------------
+Se crea una tarea en el Programador de tareas de Windows (CopyexBackupAgent_Backup):
+- funciona también con el portátil a batería y sin límite de duración,
+- puede despertar el equipo de la suspensión,
+- si el equipo estaba apagado a la hora, la copia se hace al encenderlo,
+- necesita la sesión de Windows iniciada (puede estar bloqueada).
+Mientras se ejecuta aparece una ventana pequeña abajo a la derecha con el progreso.
+
+DATOS DEL PROGRAMA
+------------------
+%APPDATA%\CopyexBackupAgent\config.xml    configuración
+%APPDATA%\CopyexBackupAgent\history.xml   últimas 100 ejecuciones (resumen)
+La contraseña del NAS se guarda cifrada con la cuenta de Windows del usuario.

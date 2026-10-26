@@ -1,0 +1,10 @@
+# Resultados de compilación: se generan en GitHub Actions, no se suben al repositorio
+bin/
+obj/
+*.exe
+*.exe.config
+*.pdb
+
+# Configuración local del usuario
+*.user
+.vs/
