@@ -146,7 +146,7 @@ namespace CopyexBackupAgent.Services
             sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-16\"?>");
             sb.AppendLine("<Task version=\"1.2\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">");
             sb.AppendLine("  <RegistrationInfo>");
-            sb.AppendLine("    <Author>Copyex</Author>");
+            sb.AppendLine("    <Author>Copyex Ofimática S.L.</Author>");
             sb.AppendLine("    <Description>Copia de seguridad automática de Copyex Backup Agent.</Description>");
             sb.AppendLine("  </RegistrationInfo>");
             sb.AppendLine("  <Triggers>");
