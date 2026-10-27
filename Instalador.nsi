@@ -27,8 +27,12 @@ SetCompressor /SOLID lzma
 !define MUI_ICON "Assets\CopyexBackupAgent.ico"
 !define MUI_UNICON "Assets\CopyexBackupAgent.ico"
 !define MUI_ABORTWARNING
-!define MUI_FINISHPAGE_RUN "$INSTDIR\${EXEFILE}"
+; El instalador corre como administrador: si abriera el programa directamente, este heredaría esos
+; permisos y la tarea programada quedaría creada como administrador (luego no se podría cambiar).
+; Abriéndolo a través de explorer.exe se ejecuta como el usuario normal.
+!define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Abrir Copyex Backup Agent"
+!define MUI_FINISHPAGE_RUN_FUNCTION LaunchAsUser
 
 !define MUI_WELCOMEPAGE_TEXT "Este asistente instalará ${APPNAME} ${VERSION}.$\r$\n$\r$\nDesarrollado por Copyex Ofimática S.L.$\r$\n$\r$\nPulse Siguiente para continuar."
 !insertmacro MUI_PAGE_WELCOME
@@ -43,6 +47,10 @@ SetCompressor /SOLID lzma
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "Spanish"
+
+Function LaunchAsUser
+    Exec '"$WINDIR\explorer.exe" "$INSTDIR\${EXEFILE}"'
+FunctionEnd
 
 Section "Copyex Backup Agent"
     ; Cierra la versión anterior si está abierta (por ejemplo, en la bandeja).

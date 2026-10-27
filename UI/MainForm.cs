@@ -978,7 +978,7 @@ namespace CopyexBackupAgent.UI
             }
 
             Cursor = Cursors.WaitCursor;
-            SchedulerResult sr = SchedulerService.Apply(config);
+            SchedulerResult sr = SchedulerService.Apply(config, true);
             Cursor = Cursors.Default;
             if (!sr.Success)
                 warnings.Add(sr.Message);

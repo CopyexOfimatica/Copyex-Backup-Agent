@@ -31,6 +31,16 @@ namespace CopyexBackupAgent.Services
 
         public static SchedulerResult Apply(BackupConfig config)
         {
+            return Apply(config, false);
+        }
+
+        /// <param name="allowElevation">
+        /// Si la tarea existente se creó con el programa abierto como administrador, Windows no deja
+        /// modificarla ni borrarla sin elevar. Con true se pide permiso (UAC) solo para borrarla y
+        /// después se vuelve a crear como usuario normal, para que no vuelva a pasar.
+        /// </param>
+        public static SchedulerResult Apply(BackupConfig config, bool allowElevation)
+        {
             SchedulerResult result = new SchedulerResult();
             try
             {
@@ -38,7 +48,12 @@ namespace CopyexBackupAgent.Services
 
                 if (config.Schedule == ScheduleMode.Disabled)
                 {
-                    RunSchtasks("/Delete /TN \"" + TaskName + "\" /F");
+                    ProcessResult del = RunSchtasks("/Delete /TN \"" + TaskName + "\" /F");
+                    if (del.ExitCode != 0 && IsInstalled() && !(allowElevation && DeleteTaskElevated()))
+                    {
+                        result.Message = "No se pudo desactivar la tarea programada de Windows.\r\n\r\n" + del.Output;
+                        return result;
+                    }
                     result.Success = true;
                     result.Message = "Copia automática desactivada.";
                     return result;
@@ -65,6 +80,8 @@ namespace CopyexBackupAgent.Services
                 try
                 {
                     pr = RunSchtasks("/Create /TN \"" + TaskName + "\" /XML \"" + file + "\" /F");
+                    if (pr.ExitCode != 0 && allowElevation && !IsElevated() && IsInstalled() && DeleteTaskElevated())
+                        pr = RunSchtasks("/Create /TN \"" + TaskName + "\" /XML \"" + file + "\" /F");
                 }
                 finally
                 {
@@ -244,6 +261,43 @@ namespace CopyexBackupAgent.Services
                 case DayOfWeek.Friday: return "viernes";
                 case DayOfWeek.Saturday: return "sábados";
                 default: return "domingos";
+            }
+        }
+
+        private static bool IsElevated()
+        {
+            try
+            {
+                return new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>Borra la tarea pidiendo permiso de administrador. Devuelve false si el usuario cancela o falla.</summary>
+        private static bool DeleteTaskElevated()
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = "schtasks.exe";
+                psi.Arguments = "/Delete /TN \"" + TaskName + "\" /F";
+                psi.UseShellExecute = true;
+                psi.Verb = "runas";
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+                using (Process p = Process.Start(psi))
+                {
+                    if (!p.WaitForExit(60000))
+                        return false;
+                    return p.ExitCode == 0;
+                }
+            }
+            catch
+            {
+                // Win32Exception 1223: el usuario ha cancelado el aviso de UAC.
+                return false;
             }
         }
 

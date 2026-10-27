@@ -75,6 +75,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create $env:GITHUB_REF_NAME CopyexBackupAgent_Setup.exe `
-            --title "Copyex Backup Agent $env:VERSION" `
-            --notes "Instalador de Copyex Backup Agent $env:VERSION. Ver README para la política de firma de código."
+          # Si la Release ya existe (se ha movido la etiqueta para corregir la misma versión), se reemplaza el instalador.
+          gh release view $env:GITHUB_REF_NAME *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME CopyexBackupAgent_Setup.exe --clobber
+          } else {
+            gh release create $env:GITHUB_REF_NAME CopyexBackupAgent_Setup.exe `
+              --title "Copyex Backup Agent $env:VERSION" `
+              --notes "Instalador de Copyex Backup Agent $env:VERSION. Ver README para la política de firma de código."
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
